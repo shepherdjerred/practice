@@ -10,7 +10,7 @@ use x86_64::structures::idt::InterruptStackFrame;
 use core::panic::PanicInfo;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");
@@ -50,8 +50,7 @@ pub extern "C" fn _start() -> ! {
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
     stack_overflow();
-    // prevent tail recursion optimizations
-    volatile::Volatile::new(0).read();
+    // prevent tail recursion optimizations... TODO
 }
 
 #[panic_handler]

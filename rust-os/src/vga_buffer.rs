@@ -1,7 +1,6 @@
 use core::fmt;
 use lazy_static::lazy_static;
 use spin::Mutex;
-use volatile::Volatile;
 
 lazy_static! {
     /// A global `Writer` instance that can be used for printing to the VGA text buffer.
@@ -65,7 +64,7 @@ const BUFFER_WIDTH: usize = 80;
 /// A structure representing the VGA text buffer.
 #[repr(transparent)]
 struct Buffer {
-    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 /// A writer type that allows writing ASCII bytes and strings to an underlying `Buffer`.
@@ -94,10 +93,12 @@ impl Writer {
                 let col = self.column_position;
 
                 let color_code = self.color_code;
-                self.buffer.chars[row][col].write(ScreenChar {
-                    ascii_character: byte,
-                    color_code,
-                });
+                unsafe {
+                    core::ptr::write_volatile(&mut self.buffer.chars[row][col], ScreenChar {
+                        ascii_character: byte,
+                        color_code,
+                    });
+                }
                 self.column_position += 1;
             }
         }
@@ -123,8 +124,10 @@ impl Writer {
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(character);
+                unsafe {
+                    let character = core::ptr::read_volatile(&self.buffer.chars[row][col]);
+                    core::ptr::write_volatile(&mut self.buffer.chars[row - 1][col], character);
+                }
             }
         }
         self.clear_row(BUFFER_HEIGHT - 1);
@@ -138,7 +141,9 @@ impl Writer {
             color_code: self.color_code,
         };
         for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
+            unsafe {
+                core::ptr::write_volatile(&mut  self.buffer.chars[row][col], blank);
+            }
         }
     }
 }
@@ -187,7 +192,9 @@ fn test_println_output() {
     let s = "Some test string that fits on a single line";
     println!("{}", s);
     for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
-        assert_eq!(char::from(screen_char.ascii_character), c);
+        unsafe {
+            let screen_char = core::ptr::read_volatile(&WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i]);
+            assert_eq!(char::from(screen_char.ascii_character), c);
+        }
     }
 }
