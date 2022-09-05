@@ -45,4 +45,3 @@ pub fn init() {
         load_tss(GLOBAL_DESCRIPTOR_TABLE.1.tss_selector);
     }
 }
-
