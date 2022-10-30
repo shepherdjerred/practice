@@ -1,20 +1,17 @@
+mod bounds;
 mod enemy;
 mod missile;
-mod movement;
 mod player;
-mod position;
 mod weapons;
 
 use bevy_rapier2d::prelude::*;
 
+use crate::bounds::{
+    constrained_to_bounds_system, despawn_out_of_bounds_system, track_out_of_bounds_system,
+};
 use crate::enemy::setup_enemy;
 use crate::missile::{display_events, player_shoot_missile_system};
-use crate::movement::{
-    bounded_movement_system, destroy_bounded_movement_system, mark_out_of_bounds_system,
-    movement_system,
-};
-use crate::player::{player_movement_input_system, setup_player};
-use crate::position::sync_transform_system;
+use crate::player::{player_input_system, setup_player};
 use crate::weapons::weapon_reload_system;
 use bevy::window::PresentMode;
 use bevy::{prelude::*, time::FixedTimestep};
@@ -34,21 +31,23 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(RapierDebugRenderPlugin::default())
+        .insert_resource(RapierConfiguration {
+            gravity: Vect::splat(0.0),
+            ..Default::default()
+        })
         .add_startup_system(setup_player)
         .add_startup_system(setup_camera)
         .add_startup_system(setup_enemy)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
-                .with_system(player_movement_input_system)
+                .with_system(player_input_system)
                 .with_system(player_shoot_missile_system)
-                .with_system(movement_system)
-                .with_system(bounded_movement_system)
-                .with_system(destroy_bounded_movement_system.exclusive_system())
-                .with_system(mark_out_of_bounds_system)
+                .with_system(constrained_to_bounds_system)
+                .with_system(despawn_out_of_bounds_system.exclusive_system())
+                .with_system(track_out_of_bounds_system)
                 .with_system(weapon_reload_system)
-                .with_system(display_events)
-                .with_system(sync_transform_system),
+                .with_system(display_events),
         )
         .add_system(bevy::window::close_on_esc)
         .run();

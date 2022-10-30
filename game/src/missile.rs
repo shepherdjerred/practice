@@ -1,10 +1,10 @@
-use crate::movement::{DestroyWhenOutOfBounds, MovementInput, MovementSpeeds};
+use crate::bounds::TrackOutOfBounds;
 use crate::player::PlayerCharacter;
-use crate::position::Position;
 use crate::weapons::Weapon;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_rapier2d::prelude::*;
+use std::ops::{Add, Mul};
 
 #[derive(Component)]
 pub struct Missile {}
@@ -14,9 +14,9 @@ pub fn player_shoot_missile_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&PlayerCharacter, &mut Weapon, &Position)>,
+    mut query: Query<(&PlayerCharacter, &mut Weapon, &Transform, &Velocity)>,
 ) {
-    let (_, mut weapon, position) = query.single_mut();
+    let (_, mut weapon, transform, velocity) = query.single_mut();
 
     if keyboard_input.pressed(KeyCode::Space) {
         if weapon.remaining_reload_time > 0.0 {
@@ -28,33 +28,22 @@ pub fn player_shoot_missile_system(
         commands
             .spawn_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-                transform: Transform::from_translation(position.vector)
-                    .with_rotation(position.rotation)
+                transform: Transform::from_translation(transform.translation.add(10.0))
+                    .with_rotation(transform.rotation)
                     .with_scale(Vec3::splat(weapon.size)),
                 material: materials.add(ColorMaterial::from(Color::BLACK)),
                 ..default()
             })
             .insert(Missile {})
-            .insert(Position {
-                rotation: position.rotation,
-                vector: position.vector,
-            })
-            .insert(MovementSpeeds {
-                movement_speed: 1.0,
-                rotation_speed: 1.0,
-            })
-            .insert(MovementInput {
-                position: weapon.projectile_speed,
-                rotation: 0.0,
-            })
-            .insert(DestroyWhenOutOfBounds {})
-            .insert(Collider::cuboid(weapon.size, weapon.size))
+            .insert(TrackOutOfBounds {})
+            .insert(Collider::cuboid(weapon.size / 4.5, weapon.size / 4.5))
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(RigidBody::Dynamic)
             .insert(Velocity {
-                linvel: Vec2::new(1.0, 2.0),
-                angvel: 0.2,
+                linvel: velocity.linvel.mul(Vec2::splat(50.0)),
+                angvel: velocity.angvel,
             })
+            .insert(ColliderMassProperties::Density(4.0))
             .insert(ActiveEvents::CONTACT_FORCE_EVENTS);
     }
 }
@@ -64,10 +53,10 @@ pub fn display_events(
     mut contact_force_events: EventReader<ContactForceEvent>,
 ) {
     for collision_event in collision_events.iter() {
-        println!("Received collision event: {:?}", collision_event);
+        // println!("Received collision event: {:?}", collision_event);
     }
 
     for contact_force_event in contact_force_events.iter() {
-        println!("Received contact force event: {:?}", contact_force_event);
+        // println!("Received contact force event: {:?}", contact_force_event);
     }
 }

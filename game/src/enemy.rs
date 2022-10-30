@@ -1,7 +1,6 @@
-use crate::movement::{ConstrainToBounds, MovementInput, MovementSpeeds};
-use crate::position::Position;
+use crate::bounds::ConstrainToBounds;
 use bevy::asset::AssetServer;
-use bevy::math::{Quat, Vec3};
+use bevy::math::Vec3;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -12,27 +11,17 @@ pub fn setup_enemy(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(SpriteBundle {
             texture: ship_handle,
+            transform: Transform::from_translation(Vec3::splat(50.0)),
             ..default()
         })
-        .insert(MovementSpeeds {
-            movement_speed: 500.0,
-            rotation_speed: f32::to_radians(360.0),
-        })
         .insert(Enemy {})
-        .insert(Position {
-            rotation: Quat::default(),
-            vector: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 10.0,
-            },
-        })
-        .insert(MovementInput {
-            position: 0.0,
-            rotation: 0.5,
-        })
         .insert(ConstrainToBounds {})
         .insert(Collider::cuboid(20.0, 10.0))
         .insert(ActiveEvents::COLLISION_EVENTS)
-        .insert(ActiveEvents::CONTACT_FORCE_EVENTS);
+        .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+        .insert(RigidBody::Dynamic)
+        .insert(Velocity {
+            linvel: Default::default(),
+            angvel: 10.0,
+        });
 }
