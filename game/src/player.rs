@@ -1,5 +1,6 @@
 use crate::movement::{ConstrainToBounds, MovementInput, MovementSpeeds};
 use crate::position::Position;
+use crate::weapons::Weapon;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -29,7 +30,13 @@ pub fn setup_player(mut commands: Commands, asset_server: Res<AssetServer>) {
             position: 0.0,
             rotation: 0.0,
         })
-        .insert(ConstrainToBounds {});
+        .insert(ConstrainToBounds {})
+        .insert(Weapon {
+            projectile_speed: 200.0,
+            size: 4.0,
+            reload_speed: 50.0,
+            remaining_reload_time: 0.0,
+        });
 }
 
 pub fn player_movement_input_system(

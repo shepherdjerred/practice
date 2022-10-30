@@ -1,9 +1,9 @@
-use crate::missile::Collidable;
 use crate::movement::{ConstrainToBounds, MovementInput, MovementSpeeds};
 use crate::position::Position;
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
-use bevy::prelude::{default, Commands, Component, Res, SpriteBundle};
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
 pub struct Enemy {}
@@ -32,5 +32,7 @@ pub fn setup_enemy(mut commands: Commands, asset_server: Res<AssetServer>) {
             rotation: 0.5,
         })
         .insert(ConstrainToBounds {})
-        .insert(Collidable {});
+        .insert(Collider::cuboid(20.0, 10.0))
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(ActiveEvents::CONTACT_FORCE_EVENTS);
 }

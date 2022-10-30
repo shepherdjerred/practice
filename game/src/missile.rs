@@ -1,58 +1,36 @@
 use crate::movement::{DestroyWhenOutOfBounds, MovementInput, MovementSpeeds};
 use crate::player::PlayerCharacter;
 use crate::position::Position;
+use crate::weapons::Weapon;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
-use std::ops::Add;
+use bevy_rapier2d::prelude::*;
 
 #[derive(Component)]
 pub struct Missile {}
-
-#[derive(Component)]
-pub struct Collidable {}
-
-pub fn missile_collision_system(
-    mut query: Query<(&Collidable, &Position, Without<Missile>)>,
-    missiles: Query<(&Missile, &Position, &Collidable)>,
-) {
-    query.for_each_mut(|item| {
-        missiles.for_each(|missile| {
-            let (_, missile_position, _) = missile;
-            let (_, item_position, _) = item;
-
-            if item_position
-                .vector
-                .add(Vec3::splat(1.0))
-                .cmpgt(missile_position.vector.add(Vec3::splat(0.5)))
-                .any()
-                && item_position
-                    .vector
-                    .add(Vec3::splat(-1.0))
-                    .cmplt(missile_position.vector.add(Vec3::splat(-0.5)))
-                    .any()
-            {
-                println!("collision");
-            }
-        })
-    })
-}
 
 pub fn player_shoot_missile_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     keyboard_input: Res<Input<KeyCode>>,
-    query: Query<(&PlayerCharacter, &Position)>,
+    mut query: Query<(&PlayerCharacter, &mut Weapon, &Position)>,
 ) {
-    let (_, position) = query.single();
+    let (_, mut weapon, position) = query.single_mut();
 
     if keyboard_input.pressed(KeyCode::Space) {
+        if weapon.remaining_reload_time > 0.0 {
+            return;
+        }
+
+        weapon.remaining_reload_time = weapon.reload_speed;
+
         commands
             .spawn_bundle(MaterialMesh2dBundle {
                 mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                 transform: Transform::from_translation(position.vector)
                     .with_rotation(position.rotation)
-                    .with_scale(Vec3::splat(4.)),
+                    .with_scale(Vec3::splat(weapon.size)),
                 material: materials.add(ColorMaterial::from(Color::BLACK)),
                 ..default()
             })
@@ -66,10 +44,30 @@ pub fn player_shoot_missile_system(
                 rotation_speed: 1.0,
             })
             .insert(MovementInput {
-                position: 700.0,
+                position: weapon.projectile_speed,
                 rotation: 0.0,
             })
             .insert(DestroyWhenOutOfBounds {})
-            .insert(Collidable {});
+            .insert(Collider::cuboid(weapon.size, weapon.size))
+            .insert(ActiveEvents::COLLISION_EVENTS)
+            .insert(RigidBody::Dynamic)
+            .insert(Velocity {
+                linvel: Vec2::new(1.0, 2.0),
+                angvel: 0.2,
+            })
+            .insert(ActiveEvents::CONTACT_FORCE_EVENTS);
+    }
+}
+
+pub fn display_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
+) {
+    for collision_event in collision_events.iter() {
+        println!("Received collision event: {:?}", collision_event);
+    }
+
+    for contact_force_event in contact_force_events.iter() {
+        println!("Received contact force event: {:?}", contact_force_event);
     }
 }
