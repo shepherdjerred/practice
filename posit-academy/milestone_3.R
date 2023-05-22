@@ -1,56 +1,54 @@
 ---
-title: Read & Visualize
+title: Transform tables
 output: html_document
 ---
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+## Recreation
 
-# Load your libraries here
+In the previous two milestones, you worked with a subset of the data. In this milestone, you can use the full data. Read in the full data from `data/survey_full.csv`. 
+
+Then, transform the data into the following table:
+
+
+```{r setup, message = FALSE, warning = FALSE}
+goal <- readr::read_csv("https://rsacdn.link/milestones/internal/R_community_survey/4wks/data/solution3.csv")
+
+# load any packages below
 library(tidyverse)
+
+goal
 ```
-
-## Read & Visualize
-
-In this milestone you'll display the "enjoyability" ratings from the dataset as a bar plot.
-
-Remember that all tidyverse packages have already been installed for you. But you will need to *load* the ones you want to use with `library()`. As a best practice when working within an R Markdown document like this one, you should always load packages in the code chunk labelled `setup`, above.
-
-
-## Recreate This
-
-You'll visualize results in a plot like the one below.
-
-
-```{r recreate-this, message = FALSE}
-# code to view preview of solution
-knitr::include_graphics("images/solution2.png")
-```
-
-### Recreation
-
-Use what you learned from this week's tutorials to import the `survey_subset` dataset and recreate the plot above. Read in the data directly from `data/survey_subset.csv`. Complete your work in the code chunk below. You may add more code chunks.
-
-*Note*: It is okay if ggplot creates some warning messages related to missing values -- these are related to missing values in the dataset.)
-
 
 ```{r recreation}
-read_csv("data/survey_subset.csv") %>%
-  ggplot(data = . , mapping = aes(x = enjoyability)) + geom_bar(aes(fill = use_frequency))
+readr::read_csv("data/survey_full.csv") %>%
+  filter(experience != "None") %>%
+  group_by(experience) %>%
+  summarise(
+    avg_enjoyability = mean(enjoyability, na.rm=TRUE) %>% round,
+    avg_recommend = mean(recommend, na.rm=TRUE) %>% round
+  )
 ```
 
 ## Extension
 
-For your extension consider modifying the plot you made above in some way or making a new visualization entirely. You do not have to limit yourself to the ggplot2 package. It is okay if your extension has more than one part to it, but please choose only one piece to teach the rest of your group so that you can comfortably go through the extension in ~5 minutes or less. 
+For your extension, consider the following options:
+
+* Filter the data
+* Summarize the data in other ways
+* Apply additional transformations with dplyr
+* For an extra challenge, look up up the help page for the [`across()` function from dplyr](https://dplyr.tidyverse.org/reference/across.html) and use it to calculate summary statistics for multiple variables all at once
+
+Write your extension code in the following chunk:
 
 
 ```{r extension}
-read_csv("data/survey_subset.csv") %>%
-  ggplot(data = . , mapping = aes(x = enjoyability, y = use_frequency)) + geom_point(aes(size = count()))
-
-
-#read_csv("data/survey_subset.csv") %>%
-#  drop_na() %>% 
-#  ggplot(data = . , mapping = aes(x = enjoyability, y = use_frequency)) + geom_bin_2d(bins = 5, drop = TRUE)
+readr::read_csv("data/survey_full.csv") %>%
+  filter(experience != "None") %>%
+  group_by(country) %>%
+  summarise(
+    avg_enjoyability = mean(enjoyability, na.rm=TRUE) %>% round,
+    avg_recommend = mean(recommend, na.rm=TRUE) %>% round
+  ) %>%
+  arrange(avg_enjoyability)
 ```
 
